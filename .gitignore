@@ -1,0 +1,28 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+*.out
+
+go.work
+
+vendor/
+*.mod
+*.sum
+
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+
+vendor/
+
+bin/
+build/
+
+.env
