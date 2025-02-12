@@ -1,0 +1,392 @@
+basePath: /v1
+definitions:
+  controllers.SuccessResponse:
+    properties:
+      token:
+        type: string
+    type: object
+  models.CreateMealDTO:
+    properties:
+      date:
+        description: 'Format: YYYY-MM-DD'
+        type: string
+      description:
+        type: string
+      in_diet:
+        type: boolean
+      name:
+        type: string
+      time:
+        description: 'Format: HH:mm'
+        type: string
+    required:
+    - date
+    - description
+    - name
+    - time
+    type: object
+  models.CreateUserDTO:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  models.EditMealDTO:
+    properties:
+      date:
+        type: string
+      description:
+        type: string
+      in_diet:
+        type: boolean
+      name:
+        type: string
+      time:
+        type: string
+    type: object
+  models.LoginDTO:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  models.Meal:
+    properties:
+      created_at:
+        type: string
+      date:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      in_diet:
+        type: boolean
+      name:
+        type: string
+      time:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  models.User:
+    properties:
+      createdAt:
+        description: Automatically managed timestamp fields
+        type: string
+      email:
+        description: Unique email field that cannot be null
+        type: string
+      id:
+        description: Primary key field using UUID
+        type: string
+      meals:
+        description: |-
+          One-to-Many relation with Meal
+          - foreignKey:UserID: specifies the foreign key field in Meal table
+          - constraint:OnDelete:CASCADE: deletes related meals when user is deleted
+        items:
+          $ref: '#/definitions/models.Meal'
+        type: array
+      name:
+        description: Required name field
+        type: string
+      password:
+        description: Required password field
+        type: string
+      updatedAt:
+        type: string
+      user_stats:
+        allOf:
+        - $ref: '#/definitions/models.UserStats'
+        description: Change the type from uuid.UUID to UserStats
+    type: object
+  models.UserDTO:
+    properties:
+      email:
+        type: string
+      name:
+        type: string
+    type: object
+  models.UserStats:
+    properties:
+      currentStreak:
+        type: integer
+      id:
+        type: string
+      inDietMeals:
+        type: integer
+      maxStreak:
+        type: integer
+      registeredMeals:
+        type: integer
+      userId:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for managing daily meals and diet tracking
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Daily Diet API
+  version: "1.0"
+paths:
+  /auth/login:
+    get:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns a JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: User login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account
+      parameters:
+      - description: User registration details
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateUserDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.UserDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register new user
+      tags:
+      - auth
+  /auth/user/{email}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves user information by email address
+      parameters:
+      - description: User email
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/models.User'
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user by email
+      tags:
+      - auth
+  /meals/delete/{mealId}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a specific meal for the authenticated user
+      parameters:
+      - description: Meal ID
+        in: path
+        name: mealId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a meal
+      tags:
+      - meals
+  /meals/edit/{mealId}:
+    patch:
+      consumes:
+      - application/json
+      description: Modifies an existing meal for the authenticated user
+      parameters:
+      - description: Meal ID
+        in: path
+        name: mealId
+        required: true
+        type: string
+      - description: Updated meal details
+        in: body
+        name: meal
+        required: true
+        schema:
+          $ref: '#/definitions/models.EditMealDTO'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Meal'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Edit an existing meal
+      tags:
+      - meals
+  /meals/list:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all meals for the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Meal'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all meals
+      tags:
+      - meals
+  /meals/new:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new meal for the authenticated user
+      parameters:
+      - description: Meal details
+        in: body
+        name: meal
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateMealDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Meal'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new meal
+      tags:
+      - meals
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

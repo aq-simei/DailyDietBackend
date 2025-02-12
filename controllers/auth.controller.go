@@ -41,6 +41,17 @@ func RegisterAuthRoutes(router *gin.RouterGroup, client *gorm.DB) {
 	}
 }
 
+// CreateUser godoc
+// @Summary Register new user
+// @Description Creates a new user account
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param user body models.CreateUserDTO true "User registration details"
+// @Success 201 {object} models.UserDTO
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /auth/register [post]
 func (controller *authController) CreateUser(ctx *gin.Context) {
 	var req models.CreateUserDTO
 	if err := ctx.BindJSON(&req); err != nil {
@@ -61,6 +72,16 @@ func (controller *authController) CreateUser(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, createdUser)
 }
 
+// GetUserByEmail godoc
+// @Summary Get user by email
+// @Description Retrieves user information by email address
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param email path string true "User email"
+// @Success 302 {object} map[string]models.User
+// @Failure 400 {object} map[string]string
+// @Router /auth/user/{email} [get]
 func (controller *authController) GetUserByEmail(ctx *gin.Context) {
 	email := ctx.Param("email")
 	user, err := controller.service.GetUserByEmail(ctx, email)
@@ -70,6 +91,21 @@ func (controller *authController) GetUserByEmail(ctx *gin.Context) {
 	ctx.JSON(http.StatusFound, gin.H{"user": user})
 }
 
+type SuccessResponse struct {
+	Token string `json:"token"`
+}
+
+// SignIn godoc
+// @Summary User login
+// @Description Authenticates a user and returns a JWT token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param login body models.LoginDTO true "Login credentials"
+// @Success 200 {object} SuccessResponse
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /auth/login [get]
 func (controller *authController) SignIn(ctx *gin.Context) {
 	var req models.LoginDTO
 	if err := ctx.BindJSON(&req); err != nil {

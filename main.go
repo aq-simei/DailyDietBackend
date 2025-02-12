@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"daily-diet-backend/database"
+	_ "daily-diet-backend/docs"
 	"daily-diet-backend/models"
 	"daily-diet-backend/router"
 	"daily-diet-backend/utils/logger"
@@ -16,6 +17,24 @@ import (
 	"gorm.io/gorm"
 )
 
+// @title           Daily Diet API
+// @version         1.0
+// @description     API for managing daily meals and diet tracking
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.url    http://www.swagger.io/support
+// @contact.email  support@swagger.io
+
+// @license.name  Apache 2.0
+// @license.url   http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host      localhost:8080
+// @BasePath  /v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	// Initialize GORM
 	db := database.InitDB()

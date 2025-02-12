@@ -43,6 +43,18 @@ func RegisteredMealsRoutes(router *gin.RouterGroup, client *gorm.DB, authService
 	}
 }
 
+// CreateMeal godoc
+// @Summary Create a new meal
+// @Description Creates a new meal for the authenticated user
+// @Tags meals
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param meal body models.CreateMealDTO true "Meal details"
+// @Success 201 {object} models.Meal
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /meals/new [post]
 func (controller *mealsController) CreateMeal(ctx *gin.Context) {
 	userId := ctx.Keys["userId"].(string)
 	parsedUserId, err := uuid.Parse(userId)
@@ -63,6 +75,20 @@ func (controller *mealsController) CreateMeal(ctx *gin.Context) {
 	}
 	ctx.JSON(201, meal)
 }
+
+// EditMeal godoc
+// @Summary Edit an existing meal
+// @Description Modifies an existing meal for the authenticated user
+// @Tags meals
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param mealId path string true "Meal ID"
+// @Param meal body models.EditMealDTO true "Updated meal details"
+// @Success 200 {object} models.Meal
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /meals/edit/{mealId} [patch]
 func (controller *mealsController) EditMeal(ctx *gin.Context) {
 	userId := ctx.Keys["userId"].(string)
 	parsedUserId, err := uuid.Parse(userId)
@@ -88,6 +114,17 @@ func (controller *mealsController) EditMeal(ctx *gin.Context) {
 	ctx.JSON(200, meal)
 }
 
+// GetMeals godoc
+// @Summary List all meals
+// @Description Retrieves all meals for the authenticated user
+// @Tags meals
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {array} models.Meal
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /meals/list [get]
 func (controller *mealsController) GetMeals(ctx *gin.Context) {
 	userId := ctx.Keys["userId"].(string)
 	parsedUserId, err := uuid.Parse(userId)
@@ -108,6 +145,18 @@ func (controller *mealsController) GetMeals(ctx *gin.Context) {
 	ctx.JSON(200, meals)
 }
 
+// DeleteMeal godoc
+// @Summary Delete a meal
+// @Description Deletes a specific meal for the authenticated user
+// @Tags meals
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param mealId path string true "Meal ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /meals/delete/{mealId} [delete]
 func (controller *mealsController) DeleteMeal(ctx *gin.Context) {
 	userId := ctx.Keys["userId"].(string)
 	parsedUserId, err := uuid.Parse(userId)
