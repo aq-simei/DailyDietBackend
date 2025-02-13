@@ -36,7 +36,7 @@ func RegisterAuthRoutes(router *gin.RouterGroup, client *gorm.DB) {
 	logger.Log(logger.DEBUG, "Registering auth routes")
 	{
 		authRouter.POST("/register", authController.CreateUser)
-		authRouter.GET("/login", authController.SignIn)
+		authRouter.POST("/login", authController.SignIn)
 		authRouter.GET("/user/:email", authController.GetUserByEmail)
 	}
 }
@@ -120,4 +120,21 @@ func (controller *authController) SignIn(ctx *gin.Context) {
 	}
 	ctx.Set("Authorization", "Bearer "+token)
 	ctx.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func (controller *authController) RefreshToken(ctx *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := ctx.BindJSON(&req); err != nil {
+		ctx.JSON(400, gin.H{"error": "error parsing request"})
+		return
+	}
+
+	refreshToken, err := controller.service.ValidateRefreshToken(ctx, req.RefreshToken)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"refresh_token": refreshToken})
 }
