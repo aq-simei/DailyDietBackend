@@ -8,7 +8,13 @@ import (
 type LoginDTO struct {
 	Email    string  `json:"email" binding:"required"`
 	Password string  `json:"password" binding:"required"`
-	DeviceID *string `json:"device_id"`
+	DeviceID *string `json:"device_id,omitempty"`
+}
+
+type LoginResponse struct {
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
+	User         User   `json:"user"`
 }
 
 type UserDTO struct {

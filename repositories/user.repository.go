@@ -17,7 +17,7 @@ import (
 type UserRepository interface {
 	CreateUser(c context.Context, data models.CreateUserDTO) (*models.User, error)
 	GetUserByEmail(c context.Context, email string) (*models.User, error)
-	Login(c context.Context, data models.LoginDTO) (*models.User, error)
+	Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error)
 	CreateRefreshToken(c context.Context, data models.CreateRefreshTokenDTO) (*models.RefreshToken, error)
 	ValidateRefreshToken(c context.Context, refreshToken string, userId string) (*models.RefreshToken, error)
 }
@@ -75,7 +75,7 @@ func (repo *userRepository) GetUserByEmail(c context.Context, email string) (*mo
 	return user, nil
 }
 
-func (repo *userRepository) Login(c context.Context, data models.LoginDTO) (*models.User, error) {
+func (repo *userRepository) Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error) {
 	user, err := repo.GetUserByEmail(c, data.Email)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -86,30 +86,41 @@ func (repo *userRepository) Login(c context.Context, data models.LoginDTO) (*mod
 	if err := crypt.ComparePassword(user.Password, data.Password); err != nil {
 		return nil, errors.NewError(errors.Unauthorized, "invalid password", err)
 	}
+
 	var refreshToken models.RefreshToken
-	var newRefreshToken models.CreateRefreshTokenDTO
+	var finalToken *models.RefreshToken
+
 	existingRefreshToken := repo.db.Where("user_id = ?", user.ID).First(&refreshToken)
 	if existingRefreshToken.Error != nil {
-		if existingRefreshToken.Error != gorm.ErrRecordNotFound {
+		if existingRefreshToken.Error == gorm.ErrRecordNotFound {
+			// Create new refresh token
+			newRefreshToken := models.CreateRefreshTokenDTO{
+				UserID: user.ID,
+			}
+			if data.DeviceID != nil {
+				newRefreshToken.DeviceID = data.DeviceID
+			}
+			finalToken, err = repo.CreateRefreshToken(c, newRefreshToken)
+			if err != nil {
+				return nil, errors.NewError(errors.Internal, "error creating refresh token", err)
+			}
+		} else {
 			return nil, errors.NewError(errors.Internal, "error finding refresh token", existingRefreshToken.Error)
 		}
-		if data.DeviceID != nil {
-			newRefreshToken.DeviceID = data.DeviceID
-		}
-		newRefreshToken.UserID = user.ID
-		_, error := repo.CreateRefreshToken(c, newRefreshToken)
-		if error != nil {
-			return nil, errors.NewError(errors.Internal, "error creating refresh token", error)
+	} else {
+		// Update existing token
+		finalToken, err = repo.UpdateRefreshToken(c, refreshToken.Token, user.ID.String())
+		if err != nil {
+			return nil, errors.NewError(errors.Internal, "error updating refresh token", err)
 		}
 	}
-	// if refreshToken.ExpireAt.Before(time.Now()) {
-	_, error := repo.UpdateRefreshToken(c, refreshToken.Token, user.ID.String())
-	if error != nil {
-		return nil, errors.NewError(errors.Internal, "error updating refresh token on login", error)
-	}
-	// }
 
-	return user, nil
+	response := &models.LoginResponse{
+		User:         *user,
+		RefreshToken: finalToken.Token,
+	}
+
+	return response, nil
 }
 
 func (repo *userRepository) CreateRefreshToken(c context.Context, data models.CreateRefreshTokenDTO) (*models.RefreshToken, error) {

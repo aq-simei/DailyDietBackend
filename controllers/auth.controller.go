@@ -118,8 +118,12 @@ func (controller *authController) SignIn(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.Set("Authorization", "Bearer "+token)
-	ctx.JSON(http.StatusOK, gin.H{"token": token})
+	ctx.Set("Authorization", "Bearer "+token.Token)
+	ctx.JSON(http.StatusOK,
+		gin.H{
+			"token":         token.Token,
+			"refresh_token": token.RefreshToken,
+		})
 }
 
 func (controller *authController) RefreshToken(ctx *gin.Context) {

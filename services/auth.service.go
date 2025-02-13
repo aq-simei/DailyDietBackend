@@ -12,7 +12,7 @@ import (
 type AuthService interface {
 	CreateUser(c context.Context, data models.CreateUserDTO) (*models.User, error)
 	GetUserByEmail(c context.Context, email string) (*models.User, error)
-	Login(c context.Context, data models.LoginDTO) (string, error)
+	Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error)
 	ValidateToken(tokenString string) (*models.JwtTokenClaims, error)
 	ValidateRefreshToken(c context.Context, tokenString string) (*models.RefreshToken, error)
 }
@@ -34,10 +34,10 @@ func (service *authService) GetUserByEmail(c context.Context, email string) (*mo
 	return service.Repo.GetUserByEmail(c, email)
 }
 
-func (service *authService) Login(c context.Context, data models.LoginDTO) (string, error) {
+func (service *authService) Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error) {
 	userLogin, err := service.Repo.Login(c, data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	/*
 		Generate JWT token -> 1 hour expiration
@@ -45,7 +45,7 @@ func (service *authService) Login(c context.Context, data models.LoginDTO) (stri
 	claims := &models.JwtTokenClaims{
 		Email: data.Email,
 		/* store userId, better for fetches latter */
-		ID: userLogin.ID,
+		ID: userLogin.User.ID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -53,7 +53,15 @@ func (service *authService) Login(c context.Context, data models.LoginDTO) (stri
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(service.JwtSecret)
+	signedToken, err := token.SignedString(service.JwtSecret)
+	if err != nil {
+		return nil, err
+	}
+	return &models.LoginResponse{
+		Token:        signedToken,
+		RefreshToken: userLogin.RefreshToken,
+		User:         userLogin.User,
+	}, nil
 }
 
 func (service *authService) ValidateToken(tokenString string) (*models.JwtTokenClaims, error) {
