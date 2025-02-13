@@ -25,6 +25,8 @@ type User struct {
 
 	// Change the type from uuid.UUID to UserStats
 	UserStats UserStats `json:"user_stats" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
+
+	RefreshToken *RefreshToken `json:"refresh_token,omitempty" gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (User) TableName() string {

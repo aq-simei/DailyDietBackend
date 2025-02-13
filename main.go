@@ -58,6 +58,7 @@ func initServer(db *gorm.DB) {
 		&models.User{},
 		&models.Meal{},
 		&models.UserStats{},
+		&models.RefreshToken{},
 	); err != nil {
 		logger.Log(logger.ERROR, "Failed to migrate database: "+err.Error())
 		return
