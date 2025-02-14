@@ -26,6 +26,12 @@ type ValidateRefreshTokenDTO struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type ValidateRefreshTokenResponse struct {
+	RefreshToken *string    `json:"refresh_token"`
+	UserEmail    *string    `json:"user_email"`
+	UserID       *uuid.UUID `json:"user_id"`
+}
+
 // TableName specifies the table name for GORM
 func (RefreshToken) TableName() string {
 	return "refresh_tokens"

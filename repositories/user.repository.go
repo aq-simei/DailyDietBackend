@@ -19,7 +19,8 @@ type UserRepository interface {
 	GetUserByEmail(c context.Context, email string) (*models.User, error)
 	Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error)
 	CreateRefreshToken(c context.Context, data models.CreateRefreshTokenDTO) (*models.RefreshToken, error)
-	ValidateRefreshToken(c context.Context, refreshToken string, userId string) (*models.RefreshToken, error)
+	ValidateRefreshToken(c context.Context, refreshToken string) (*models.RefreshToken, error)
+	GetUserByID(c context.Context, id string) (*models.User, error)
 }
 
 type userRepository struct {
@@ -141,9 +142,9 @@ func (repo *userRepository) CreateRefreshToken(c context.Context, data models.Cr
 	return &token, nil
 }
 
-func (repo *userRepository) ValidateRefreshToken(c context.Context, refreshToken string, userId string) (*models.RefreshToken, error) {
+func (repo *userRepository) ValidateRefreshToken(c context.Context, refreshToken string) (*models.RefreshToken, error) {
 	var token models.RefreshToken
-	result := repo.db.WithContext(c).Where("token = ? AND user_id = ?", refreshToken, userId).First(&token)
+	result := repo.db.WithContext(c).Where("token = ?", refreshToken).First(&token)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, result.Error
@@ -151,10 +152,13 @@ func (repo *userRepository) ValidateRefreshToken(c context.Context, refreshToken
 		return nil, errors.NewError(errors.Internal, "error finding refresh token in database", result.Error)
 	}
 
-	if token.Revoked || token.ExpireAt.Before(time.Now()) {
-		return nil, errors.NewError(errors.Unauthorized, "token expired or revoked", nil)
+	if token.Revoked {
+		return nil, errors.NewError(errors.Unauthorized, "token revoked", nil)
 	}
-
+	if token.ExpireAt.Before(time.Now()) {
+		return nil, errors.NewError(errors.Unauthorized, "token expired", nil)
+	}
+	// token is valid
 	// update token and expire time
 	return &token, nil
 }
@@ -196,4 +200,16 @@ func (repo *userRepository) UpdateRefreshToken(c context.Context, refreshToken s
 		return nil, errors.NewError(errors.Internal, "error updating refresh token", err)
 	}
 	return &token, nil
+}
+
+func (repo *userRepository) GetUserByID(c context.Context, id string) (*models.User, error) {
+	user := &models.User{}
+	result := repo.db.WithContext(c).Where("id = ?", id).First(user)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, result.Error
+		}
+		return nil, errors.NewError(errors.Internal, "error finding user in database", result.Error)
+	}
+	return user, nil
 }

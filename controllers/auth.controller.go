@@ -7,8 +7,10 @@ import (
 	"daily-diet-backend/utils/logger"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 )
 
@@ -16,6 +18,7 @@ type AuthController interface {
 	CreateUser(ctx *gin.Context)
 	SignIn(ctx *gin.Context)
 	GetUserByEmail(ctx *gin.Context)
+	RefreshTokenLogin(ctx *gin.Context)
 }
 
 type authController struct {
@@ -37,6 +40,7 @@ func RegisterAuthRoutes(router *gin.RouterGroup, client *gorm.DB) {
 	{
 		authRouter.POST("/register", authController.CreateUser)
 		authRouter.POST("/login", authController.SignIn)
+		authRouter.POST("/login/token", authController.RefreshTokenLogin)
 		authRouter.GET("/user/:email", authController.GetUserByEmail)
 	}
 }
@@ -126,7 +130,7 @@ func (controller *authController) SignIn(ctx *gin.Context) {
 		})
 }
 
-func (controller *authController) RefreshToken(ctx *gin.Context) {
+func (controller *authController) RefreshTokenLogin(ctx *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -135,10 +139,39 @@ func (controller *authController) RefreshToken(ctx *gin.Context) {
 		return
 	}
 
-	refreshToken, err := controller.service.ValidateRefreshToken(ctx, req.RefreshToken)
+	validateRefreshTokenResponse, err := controller.service.ValidateRefreshToken(ctx, req.RefreshToken)
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"refresh_token": refreshToken})
+
+	jwtKey := []byte(os.Getenv("JWT_SECRET"))
+
+	/*
+		Generate JWT token -> 1 hour expiration
+	*/
+	claims := &models.JwtTokenClaims{
+		Email: *validateRefreshTokenResponse.UserEmail,
+		/* store userId, better for fetches latter */
+		ID: *validateRefreshTokenResponse.UserID,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "daily-diet-backend",
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signedToken, err := token.SignedString(jwtKey)
+	if err != nil {
+		ctx.JSON(500, gin.H{"Jwt Sign Error": err.Error()})
+		return
+	}
+
+	ctx.Set("Authorization", "Bearer "+signedToken)
+	ctx.JSON(http.StatusOK, gin.H{
+		"refresh_token": validateRefreshTokenResponse.RefreshToken,
+		"jwt_token":     signedToken,
+		"user_email":    validateRefreshTokenResponse.UserEmail,
+		"user_id":       validateRefreshTokenResponse.UserID,
+	})
 }

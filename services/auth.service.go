@@ -14,7 +14,7 @@ type AuthService interface {
 	GetUserByEmail(c context.Context, email string) (*models.User, error)
 	Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error)
 	ValidateToken(tokenString string) (*models.JwtTokenClaims, error)
-	ValidateRefreshToken(c context.Context, tokenString string) (*models.RefreshToken, error)
+	ValidateRefreshToken(c context.Context, tokenString string) (*models.ValidateRefreshTokenResponse, error)
 }
 
 type authService struct {
@@ -82,7 +82,25 @@ func (service *authService) ValidateToken(tokenString string) (*models.JwtTokenC
 	return claims, nil
 }
 
-func (service *authService) ValidateRefreshToken(c context.Context, tokenString string) (*models.RefreshToken, error) {
-	userId := c.Value("userId").(string)
-	return service.Repo.ValidateRefreshToken(c, tokenString, userId)
+func (service *authService) ValidateRefreshToken(c context.Context, tokenString string) (*models.ValidateRefreshTokenResponse, error) {
+	refresh_token, err := service.Repo.ValidateRefreshToken(c, tokenString)
+
+	if err != nil {
+		return nil, err
+	}
+	if refresh_token != nil {
+		// get user by refresh_token userId
+		relatedUser, err := service.Repo.GetUserByID(c, refresh_token.UserID.String())
+		if err != nil {
+			return nil, err
+		}
+		validatedResponse := &models.ValidateRefreshTokenResponse{
+			RefreshToken: &refresh_token.Token,
+			UserEmail:    &relatedUser.Email,
+			UserID:       &refresh_token.UserID,
+		}
+		return validatedResponse, nil
+	}
+
+	return nil, err
 }
