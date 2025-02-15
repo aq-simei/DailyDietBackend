@@ -133,7 +133,7 @@ func (controller *mealsController) GetMeals(ctx *gin.Context) {
 		return
 	}
 	if userId == "" {
-		ctx.JSON(400, gin.H{"error": "userId not found"})
+		ctx.JSON(404, gin.H{"error": "userId not found"})
 		return
 	}
 
