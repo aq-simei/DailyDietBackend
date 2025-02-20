@@ -32,7 +32,7 @@ type EditMealDTO struct {
 
 type CreateMealDTO struct {
 	Name        string    `json:"name" binding:"required"`
-	Description string    `json:"description" binding:"required"`
+	Description *string   `json:"description,omitempty"`
 	Date        time.Time `json:"date" binding:"required"` // Format: YYYY-MM-DD
 	Time        time.Time `json:"time" binding:"required"` // Format: HH:mm
 	InDiet      bool      `json:"in_diet" binding:"boolean"`

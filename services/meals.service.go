@@ -13,6 +13,7 @@ type MealsService interface {
 	CreateMeal(c context.Context, data models.CreateMealDTO, userId uuid.UUID) (*models.Meal, error)
 	DeleteMeal(c context.Context, mealId string, userId uuid.UUID) error
 	EditMeal(c context.Context, mealId string, userId uuid.UUID, data models.EditMealDTO) (*models.Meal, error)
+	GetMeal(c context.Context, mealId string, userId uuid.UUID) (*models.Meal, error)
 }
 
 type mealsService struct {
@@ -42,4 +43,8 @@ func (service *mealsService) EditMeal(
 	data models.EditMealDTO,
 ) (*models.Meal, error) {
 	return service.repo.EditMeal(c, mealId, userId, data)
+}
+
+func (service *mealsService) GetMeal(c context.Context, mealId string, userId uuid.UUID) (*models.Meal, error) {
+	return service.repo.GetMeal(c, mealId, userId)
 }

@@ -17,6 +17,7 @@ type MealsController interface {
 	EditMeal(ctx *gin.Context)
 	GetMeals(ctx *gin.Context)
 	DeleteMeal(ctx *gin.Context)
+	GetMeal(ctx *gin.Context)
 }
 
 type mealsController struct {
@@ -40,6 +41,7 @@ func RegisteredMealsRoutes(router *gin.RouterGroup, client *gorm.DB, authService
 		mealsRouter.GET("/list", mealsController.GetMeals)
 		mealsRouter.PATCH("edit/:mealId", mealsController.EditMeal)
 		mealsRouter.DELETE("delete/:mealId", mealsController.DeleteMeal)
+		mealsRouter.GET("/:mealId", mealsController.GetMeal)
 	}
 }
 
@@ -63,8 +65,10 @@ func (controller *mealsController) CreateMeal(ctx *gin.Context) {
 		return
 	}
 	var req models.CreateMealDTO
+	logger.Log(logger.DEBUG, "Creating meal")
 
 	if err := ctx.BindJSON(&req); err != nil {
+		logger.Log(logger.ERROR, err.Error())
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -103,6 +107,7 @@ func (controller *mealsController) EditMeal(ctx *gin.Context) {
 	}
 	var req models.EditMealDTO
 	if err := ctx.BindJSON(&req); err != nil {
+		logger.Log(logger.ERROR, err.Error())
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -176,4 +181,25 @@ func (controller *mealsController) DeleteMeal(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(204, nil)
+}
+
+func (controller *mealsController) GetMeal(ctx *gin.Context) {
+	userId := ctx.Keys["userId"].(string)
+	parsedUserId, err := uuid.Parse(userId)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": "could not parse userId"})
+		return
+	}
+	mealId := ctx.Param("mealId")
+	if mealId == "" {
+		ctx.JSON(400, gin.H{"error": "mealId not found"})
+		return
+	}
+
+	meal, err := controller.service.GetMeal(ctx, mealId, parsedUserId)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, meal)
 }

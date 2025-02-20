@@ -16,6 +16,7 @@ type MealsRepository interface {
 	CreateMeal(c context.Context, data models.CreateMealDTO, userId uuid.UUID) (*models.Meal, error)
 	DeleteMeal(c context.Context, mealId string, userId uuid.UUID) error
 	EditMeal(c context.Context, mealId string, userId uuid.UUID, data models.EditMealDTO) (*models.Meal, error)
+	GetMeal(c context.Context, mealId string, userId uuid.UUID) (*models.Meal, error)
 }
 
 type mealsRepository struct {
@@ -47,12 +48,15 @@ func (repo *mealsRepository) CreateMeal(
 	txErr = repo.database.Transaction(
 		func(tx *gorm.DB) error {
 			meal = &models.Meal{
-				Name:        data.Name,
-				UserID:      userId,
-				Date:        data.Date,
-				Time:        data.Time,
-				InDiet:      data.InDiet,
-				Description: data.Description,
+				Name:   data.Name,
+				UserID: userId,
+				Date:   data.Date,
+				Time:   data.Time,
+				InDiet: data.InDiet,
+			}
+
+			if data.Description != nil {
+				meal.Description = *data.Description
 			}
 
 			if err := tx.Create(meal).Error; err != nil {
@@ -280,4 +284,29 @@ func (repo *mealsRepository) EditMeal(
 	}
 
 	return toEditMeal, nil
+}
+
+func (repo *mealsRepository) GetMeal(
+	c context.Context,
+	mealId string,
+	userId uuid.UUID,
+) (*models.Meal, error) {
+	var meal *models.Meal
+	if err := repo.database.WithContext(c).
+		Where("id = ? AND user_id = ?", mealId, userId).
+		First(&meal).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NewError(
+				errors.NotFound,
+				"no meal with id -> "+mealId,
+				err,
+			)
+		}
+		return nil, errors.NewError(
+			errors.Internal,
+			"could not find meal with id ->"+mealId,
+			err,
+		)
+	}
+	return meal, nil
 }

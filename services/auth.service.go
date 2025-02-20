@@ -15,6 +15,7 @@ type AuthService interface {
 	Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error)
 	ValidateToken(tokenString string) (*models.JwtTokenClaims, error)
 	ValidateRefreshToken(c context.Context, tokenString string) (*models.ValidateRefreshTokenResponse, error)
+	UpdateRefreshToken(c context.Context, refreshToken string, userId string) (*models.RefreshToken, error)
 }
 
 type authService struct {
@@ -103,4 +104,12 @@ func (service *authService) ValidateRefreshToken(c context.Context, tokenString 
 	}
 
 	return nil, err
+}
+
+func (service *authService) UpdateRefreshToken(c context.Context, refreshToken string, userId string) (*models.RefreshToken, error) {
+	updatedToken, err := service.Repo.UpdateRefreshToken(c, refreshToken, userId)
+	if err != nil {
+		return nil, err
+	}
+	return updatedToken, nil
 }
