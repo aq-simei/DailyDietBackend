@@ -201,5 +201,14 @@ func (controller *mealsController) GetMeal(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(200, meal)
+	ctx.JSON(200, gin.H{
+		"meal": &models.GetMealDTO{
+			ID:          meal.ID,
+			Name:        meal.Name,
+			Description: meal.Description,
+			Date:        meal.Date,
+			Time:        meal.Time,
+			InDiet:      meal.InDiet,
+		},
+	})
 }

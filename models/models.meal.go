@@ -37,3 +37,12 @@ type CreateMealDTO struct {
 	Time        time.Time `json:"time" binding:"required"` // Format: HH:mm
 	InDiet      bool      `json:"in_diet" binding:"boolean"`
 }
+
+type GetMealDTO struct {
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Date        time.Time `json:"date"`
+	Time        time.Time `json:"time"`
+	InDiet      bool      `json:"in_diet"`
+}
