@@ -145,6 +145,13 @@ func (controller *authController) RefreshTokenLogin(ctx *gin.Context) {
 		return
 	}
 
+	updatedRefreshToken, err := controller.service.UpdateRefreshToken(ctx, *validateRefreshTokenResponse.RefreshToken, validateRefreshTokenResponse.UserID.String())
+
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": "error updating refresh token ::" + err.Error()})
+		return
+	}
+
 	jwtKey := []byte(os.Getenv("JWT_SECRET"))
 
 	/*
@@ -169,9 +176,9 @@ func (controller *authController) RefreshTokenLogin(ctx *gin.Context) {
 
 	ctx.Set("Authorization", "Bearer "+signedToken)
 	ctx.JSON(http.StatusOK, gin.H{
-		"refresh_token": validateRefreshTokenResponse.RefreshToken,
+		"refresh_token": updatedRefreshToken.Token,
 		"jwt_token":     signedToken,
 		"user_email":    validateRefreshTokenResponse.UserEmail,
-		"user_id":       validateRefreshTokenResponse.UserID,
+		"user_id":       updatedRefreshToken.UserID,
 	})
 }

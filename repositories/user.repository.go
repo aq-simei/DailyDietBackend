@@ -20,6 +20,7 @@ type UserRepository interface {
 	Login(c context.Context, data models.LoginDTO) (*models.LoginResponse, error)
 	CreateRefreshToken(c context.Context, data models.CreateRefreshTokenDTO) (*models.RefreshToken, error)
 	ValidateRefreshToken(c context.Context, refreshToken string) (*models.RefreshToken, error)
+	UpdateRefreshToken(c context.Context, refreshToken string, userId string) (*models.RefreshToken, error)
 	GetUserByID(c context.Context, id string) (*models.User, error)
 }
 
@@ -192,13 +193,14 @@ func (repo *userRepository) UpdateRefreshToken(c context.Context, refreshToken s
 	patches := map[string]interface{}{
 		"expire_at":  time.Now().Add(time.Hour * 24 * 7),
 		"updated_at": time.Now(),
-		"Token":      uuid.New().String(),
+		"token":      uuid.New().String(),
 	}
-	token.ExpireAt = time.Now().Add(time.Hour * 24 * 7) // 1 week
-	token.UpdatedAt = time.Now()
 	if err := repo.db.Model(&token).Updates(patches).Error; err != nil {
 		return nil, errors.NewError(errors.Internal, "error updating refresh token", err)
 	}
+	// return updated token
+	logger.Log(logger.DEBUG, "Refresh token updated")
+	logger.Log(logger.DEBUG, token.Token)
 	return &token, nil
 }
 
