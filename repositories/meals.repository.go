@@ -230,57 +230,102 @@ func (repo *mealsRepository) EditMeal(
 	data models.EditMealDTO,
 ) (*models.Meal, error) {
 	var toEditMeal *models.Meal
+	var txErr error
 
-	err := repo.database.WithContext(c).
-		Where("id = ?", mealId).
-		First(&toEditMeal).Error
-	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.NewError(
-				errors.NotFound,
-				"no meal with id -> "+mealId,
+	txErr = repo.database.Transaction(func(tx *gorm.DB) error {
+		if err := tx.WithContext(c).
+			Where("id = ?", mealId).
+			First(&toEditMeal).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return errors.NewError(
+					errors.NotFound,
+					"no meal with id -> "+mealId,
+					err,
+				)
+			}
+			return errors.NewError(
+				errors.Internal,
+				"could not find meal with id ->"+mealId,
 				err,
 			)
 		}
-		return nil, errors.NewError(
-			errors.Internal,
-			"could not find meal with id ->"+mealId,
-			err,
-		)
-	}
 
-	if toEditMeal.UserID != userId {
-		return nil, errors.NewError(
-			errors.Forbidden,
-			"you are not allowed to edit this meal",
-			nil,
-		)
-	}
+		if toEditMeal.UserID != userId {
+			return errors.NewError(
+				errors.Forbidden,
+				"you are not allowed to edit this meal",
+				nil,
+			)
+		}
 
-	if data.Name != nil {
-		toEditMeal.Name = *data.Name
-	}
-	if data.Description != nil {
-		toEditMeal.Description = *data.Description
-	}
-	if data.Date != nil {
-		toEditMeal.Date = *data.Date
-	}
-	if data.Time != nil {
-		toEditMeal.Time = *data.Time
-	}
-	if data.InDiet != nil {
-		toEditMeal.InDiet = *data.InDiet
-	}
+		oldInDiet := toEditMeal.InDiet
 
-	if err := repo.database.
-		WithContext(c).
-		Save(&toEditMeal).Error; err != nil {
-		return nil, errors.NewError(
-			errors.Internal,
-			"error updating meal",
-			err,
-		)
+		if data.Name != nil {
+			toEditMeal.Name = *data.Name
+		}
+		if data.Description != nil {
+			toEditMeal.Description = *data.Description
+		}
+		if data.Date != nil {
+			toEditMeal.Date = *data.Date
+		}
+		if data.Time != nil {
+			toEditMeal.Time = *data.Time
+		}
+		if data.InDiet != nil {
+			toEditMeal.InDiet = *data.InDiet
+		}
+
+		if err := tx.Save(&toEditMeal).Error; err != nil {
+			return errors.NewError(
+				errors.Internal,
+				"error updating meal",
+				err,
+			)
+		}
+
+		// Update stats if InDiet value changed
+		if data.InDiet != nil && oldInDiet != *data.InDiet {
+			var stats models.UserStats
+			if err := tx.Where("user_id = ?", userId).First(&stats).Error; err != nil {
+				return errors.NewError(
+					errors.Internal,
+					"error finding user stats",
+					err,
+				)
+			}
+
+			stats.InDietMeals = stats.UpdateInDietMeals(
+				*data.InDiet,
+				false,
+				false,
+				oldInDiet,
+				stats.InDietMeals,
+			)
+			stats.MaxStreak = stats.UpdateMaxStreak(
+				*data.InDiet,
+				stats.MaxStreak,
+				stats.CurrentStreak,
+			)
+			stats.CurrentStreak = stats.UpdateCurrentStreak(
+				*data.InDiet,
+				stats.CurrentStreak,
+			)
+
+			if err := tx.Save(&stats).Error; err != nil {
+				return errors.NewError(
+					errors.Internal,
+					"error updating user stats",
+					err,
+				)
+			}
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return nil, txErr
 	}
 
 	return toEditMeal, nil

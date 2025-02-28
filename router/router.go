@@ -26,6 +26,7 @@ func NewRouter(client *gorm.DB) *gin.Engine {
 
 	controllers.RegisterAuthRoutes(v1, client)
 	controllers.RegisteredMealsRoutes(v1, client, authService)
+	controllers.RegisterUserStatsRoutes(v1, client, authService)
 
 	return router
 }
